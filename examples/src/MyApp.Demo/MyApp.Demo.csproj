@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- The demo: only APP1001 is promoted to a build error, so the live fix is
+         isolated and obvious. Everything else stays a normal warning. -->
+    <WarningsAsErrors>$(WarningsAsErrors);APP1001</WarningsAsErrors>
+
+    <!-- Write generated sources to disk so you can open Priority.g.cs during the
+         demo: obj/Debug/net10.0/generated/MyApp.CodeGen/... -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <!-- All three tooling projects are consumed as analyzers (not runtime refs).
+       The generator injects the [GeneratedEnum] attribute into this compilation,
+       so no runtime reference to it is needed. -->
+  <ItemGroup>
+    <ProjectReference Include="..\MyApp.CodeGen\MyApp.CodeGen.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\MyApp.Analyzers\MyApp.Analyzers.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\MyApp.CodeFixes\MyApp.CodeFixes.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

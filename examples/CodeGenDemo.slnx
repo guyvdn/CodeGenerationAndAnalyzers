@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MyApp.Analyzers/MyApp.Analyzers.csproj" />
+    <Project Path="src/MyApp.CodeFixes/MyApp.CodeFixes.csproj" />
+    <Project Path="src/MyApp.CodeGen/MyApp.CodeGen.csproj" />
+    <Project Path="src/MyApp.Demo/MyApp.Demo.csproj" />
+  </Folder>
+</Solution>
