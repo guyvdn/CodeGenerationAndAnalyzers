@@ -36,6 +36,26 @@ revealOptions:
   .reveal .small {
     font-size: 0.7em;
   }
+  .code-title {
+    font-size: 0.5em;
+    background-color: #383838;
+    border-bottom: 1px solid #282A36;
+    color: #fff;
+    padding: 4px 10px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    display: block;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 0px !important;
+    font-family: monospace;
+    text-align: left;
+  }
+
+  .code-wrapper pre {
+    display: block;
+    margin-top: 0 !important;
+  }
 </style>
 
 # Transform Your .NET Development

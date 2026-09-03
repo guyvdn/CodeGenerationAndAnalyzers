@@ -52,8 +52,12 @@ See [`skills/authoring-roslyn-tools/SKILL.md`](skills/authoring-roslyn-tools/SKI
 
 ```powershell
 npm install -g reveal-md
-reveal-md slides.md --port 8080 --watch
+./start.ps1                        # serves on http://localhost:8080, live-reloads on save
 ```
+
+`start.ps1` runs `reveal-md` with `reveal-preprocessor.js`, which adds two things to
+plain Markdown: a title bar above a fenced code block (```` ```csharp title="Priority.cs" ````)
+and `<!-- include: slides/other.md -->` to split the deck across files.
 
 ## Running the demo
 
