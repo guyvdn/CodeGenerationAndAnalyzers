@@ -13,10 +13,18 @@ An agent can ignore a README. It cannot ignore a red build.
 
 | Path | What it is |
 |------|------------|
-| `slides.md` | The [reveal-md](https://github.com/webpro/reveal-md) presentation (speaker notes included) |
-| `slides.pdf` | Exported PDF of the deck |
+| `deck/` | **The interactive [reveal.js](https://revealjs.com) deck** — custom interface, five live demo panels. See [`deck/README.md`](deck/README.md) |
+| `slides.md` | The original [reveal-md](https://github.com/webpro/reveal-md) presentation (speaker notes included) |
+| `slides.pdf` | Exported PDF of the reveal-md deck |
 | `examples/` | `CodeGenDemo` — a real, buildable analyzers & source-generator solution |
 | `skills/authoring-roslyn-tools/` | An AI skill that teaches an agent to write correct, *fast* Roslyn tooling |
+
+Two decks, same talk. `deck/` is the one to present: same content and speaker
+notes, but the four parts each own an accent colour, there's a chapter rail and a
+slash-to-jump palette, and five slides are interactive rather than described —
+the generator actually emits its file, the light bulb actually applies the code
+fix, and the slow analyzer actually loses the race. `slides.md` stays as the
+plain-markdown version.
 
 ## What the talk covers
 
@@ -48,7 +56,19 @@ ends in a checklist.
 Package that checklist as a skill so the agent applies it without being asked.
 See [`skills/authoring-roslyn-tools/SKILL.md`](skills/authoring-roslyn-tools/SKILL.md).
 
-## Running the deck
+## Running the decks
+
+The interactive one (recommended):
+
+```powershell
+./start-deck.ps1                   # installs deps on first run, serves on http://localhost:8081
+```
+
+Keys: <kbd>?</kbd> help, <kbd>/</kbd> jump to a slide, <kbd>B</kbd> run the demo on
+an interactive slide, <kbd>R</kbd> reset it, <kbd>D</kbd> draw, <kbd>S</kbd> speaker
+notes. reveal.js is installed locally, so it presents with no network.
+
+The reveal-md one:
 
 ```powershell
 npm install -g reveal-md

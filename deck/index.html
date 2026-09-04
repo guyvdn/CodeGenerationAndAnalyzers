@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transform Your .NET Development — Code Generation &amp; Analyzers in Action</title>
+
+  <link rel="stylesheet" href="node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="node_modules/reveal.js/dist/reveal.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/deck.css">
+</head>
+<body>
+
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ================================================================
+         PART 0 — INTRO
+         ================================================================ -->
+
+    <section data-part="intro" data-title="Title" class="title-slide" data-transition="fade">
+      <span class="eyebrow">Code Generation &amp; Analyzers</span>
+      <h1>Transform Your<br>.NET Development</h1>
+      <h2>The compiler as your fastest — and strictest — teammate</h2>
+      <p class="tagline">AI agents write code faster than ever. <em>Faster</em> is not the same as <em>better</em>.</p>
+      <div class="meta">
+        <span class="chip"><b>4</b> parts</span>
+        <span class="chip"><b>5</b> interactive demos</span>
+        <span class="chip">press <b>?</b> for keys</span>
+      </div>
+      <aside class="notes">
+        Welcome. In 15-20 minutes I'll show why the compiler becomes more important in the
+        AI era, not less. Two techniques: source generators and analyzers. Every example
+        comes from a real .NET codebase, made generic.
+        NEW: this deck has interactive panels — hit the buttons, they are part of the story.
+      </aside>
+    </section>
+
+    <section data-part="intro" data-title="The new reality">
+      <h2>The new reality</h2>
+      <div class="grid-3">
+        <div class="card fragment fade-up">
+          <h4>Speed</h4>
+          <p class="big">10&times;</p>
+          <p>AI agents write code <strong>faster than ever</strong>.</p>
+        </div>
+        <div class="card fragment fade-up">
+          <h4>But</h4>
+          <p class="big">&ne;</p>
+          <p><em>Faster</em> is not the same as <strong>better</strong>.</p>
+        </div>
+        <div class="card fragment fade-up">
+          <h4>The lever</h4>
+          <p class="big">2</p>
+          <p>Forces of the <strong>compiler</strong> make the difference.</p>
+        </div>
+      </div>
+      <div class="row" style="margin-top:22px">
+        <div class="card col fragment fade-up" style="border-left:3px solid var(--accent-2)">
+          <h4 style="color:var(--accent-2)">Source Generators</h4>
+          <p>Let the compiler <strong>write the repetition</strong>.</p>
+        </div>
+        <div class="card col fragment fade-up" style="border-left:3px solid var(--warn)">
+          <h4 style="color:var(--warn)">Analyzers</h4>
+          <p>Let the compiler <strong>enforce your rules</strong>.</p>
+        </div>
+      </div>
+      <aside class="notes">
+        The throughline: let the machine do what the machine is good at. The compiler is
+        deterministic, fast and tireless. An agent is not.
+      </aside>
+    </section>
+
+    <section data-part="intro" data-title="The problem with &quot;fast&quot;">
+      <h2>The problem with &ldquo;fast&rdquo;</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out">Agents duplicate boilerplate in <strong>seconds</strong></li>
+        <li class="fragment fade-in-then-semi-out">Copy-paste at scale &rarr; <strong>drift</strong>, inconsistency, subtle bugs</li>
+        <li class="fragment fade-in-then-semi-out">10 variants of &ldquo;almost the same&rdquo; &rarr; maintenance hell</li>
+        <li class="fragment fade-in-then-semi-out">More code = more surface for mistakes</li>
+      </ul>
+      <blockquote class="pull fragment fade-up">
+        <p>AI makes it cheap to do the <em>wrong</em> things — at scale.</p>
+      </blockquote>
+      <aside class="notes">
+        The temptation is strong: "the agent does it in a second anyway." But ten
+        duplicated converters are ten places that can drift out of sync.
+      </aside>
+    </section>
+
+    <section data-part="intro" data-title="Two allies of the compiler">
+      <h2>Two allies of the compiler</h2>
+      <table class="matrix">
+        <thead>
+          <tr><th style="width:20%"></th><th>Source Generator</th><th>Analyzer</th></tr>
+        </thead>
+        <tbody>
+          <tr class="fragment fade-in"><th>Role</th><td>Writes code</td><td>Guards code</td></tr>
+          <tr class="fragment fade-in"><th>When</th><td>At build time</td><td>At build time <strong>and</strong> in the IDE</td></tr>
+          <tr class="fragment fade-in"><th>Payoff</th><td>One source, zero duplication</td><td>Rules no one can ignore</td></tr>
+          <tr class="fragment fade-in"><th>Output</th><td><code>.g.cs</code> files</td><td>Warnings / build errors</td></tr>
+        </tbody>
+      </table>
+      <aside class="notes">
+        Generators reduce the amount of hand-written code. Analyzers guard the quality of
+        the code that remains. Together: less code, stronger guarantees.
+      </aside>
+    </section>
+
+    <!-- ================================================================
+         PART 1 — SOURCE GENERATORS
+         ================================================================ -->
+
+    <section data-part="gen" data-title="Part 1 — Source Generators" class="part-divider" data-transition="zoom">
+      <div class="kicker">Part one</div>
+      <h1>Source<br>Generators</h1>
+      <p class="sub">Let the compiler write the repetition</p>
+      <div class="rule"></div>
+      <aside class="notes">Part 1. Generators. Keep it brisk — the interactive pipeline slide is the centrepiece.</aside>
+    </section>
+
+    <section data-part="gen" data-title="The idea: one attribute">
+      <h2>The idea: one attribute</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="Priority.cs" data-tag="hand-written">
+        <script type="text/template">
+[GeneratedEnum(EnumType.Int)]
+public sealed partial class Priority
+{
+    public required string Name { get; init; }
+
+    public static Priority Low  { get; } = new() { Value = 1, Name = "Low" };
+    public static Priority High { get; } = new() { Value = 2, Name = "High" };
+
+    public override string ToString() => Name;
+}
+        </script>
+      </figure>
+      <blockquote class="pull fragment fade-up">
+        <p>You write the <strong>intent</strong>. The compiler writes the rest.</p>
+      </blockquote>
+      <aside class="notes">
+        This is the only code the developer writes: a partial class with an attribute and
+        the values. Type-safe, no magic strings. Note `Value` is never declared here —
+        the generator emits it. Remove the generator and this file stops compiling.
+      </aside>
+    </section>
+
+    <!-- ---------------- INTERACTIVE 1: the generator pipeline ---------- -->
+    <section data-part="gen" data-title="Run the generator" data-interactive>
+      <h2>Run the generator</h2>
+      <div class="toolbar" data-widget="pipeline-toolbar">
+        <span class="label">Enum backing type</span>
+        <div class="seg" data-role="kind">
+          <button data-kind="Int" aria-selected="true">EnumType.Int</button>
+          <button data-kind="String">EnumType.String</button>
+          <button data-kind="Guid">EnumType.Guid</button>
+        </div>
+        <button class="btn primary" data-role="build">&#9654; dotnet build <span class="kbd">B</span></button>
+        <button class="btn" data-role="reset">Reset</button>
+      </div>
+
+      <div class="pipeline" data-widget="pipeline">
+        <figure class="code-window" data-role="input">
+          <div class="chrome">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="name">Priority.cs</span>
+            <span class="tag">you write this</span>
+          </div>
+          <div class="codelines" data-role="input-code"></div>
+        </figure>
+
+        <div class="arrow">
+          <div class="beam"></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <g class="cog">
+              <circle cx="12" cy="12" r="3.2"/>
+              <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/>
+            </g>
+          </svg>
+        </div>
+
+        <figure class="code-window out" data-role="output">
+          <div class="chrome">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="name" data-role="out-name">Priority.g.cs</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">auto-generated</span>
+          </div>
+          <div class="codelines" data-role="output-code"></div>
+          <div class="placeholder">nothing generated yet<br><span style="opacity:.6">press &ldquo;dotnet build&rdquo;</span></div>
+        </figure>
+      </div>
+
+      <div class="stat-strip" data-role="stats">
+        <span class="s">emitted <b data-role="stat-lines">0</b> lines</span>
+        <span class="s">files: <b>Priority.g.cs</b></span>
+        <span class="s">hand-written: <b>0</b></span>
+        <span class="s">drift risk: <b>none</b></span>
+      </div>
+
+      <aside class="notes">
+        THIS is the slide to spend time on. Press Build: the generator emits the typed
+        Value property, both JSON converters and the EF value converter. Then flip
+        Int -> String and build again: the whole generated surface changes, from ONE
+        attribute argument. No other edit anywhere. That is the entire argument for
+        generation over duplication — say it out loud here.
+        Keyboard: B builds, R resets.
+      </aside>
+    </section>
+
+    <section data-part="gen" data-title="Generator vs. AI duplication">
+      <h2>Generator vs. AI duplication</h2>
+      <table class="matrix">
+        <thead>
+          <tr><th style="width:26%"></th><th>Source Generator</th><th>Agent that copies</th></tr>
+        </thead>
+        <tbody>
+          <tr class="fragment fade-in"><th>Source of truth</th><td class="win">One (the attribute)</td><td class="lose">Spread across N files</td></tr>
+          <tr class="fragment fade-in"><th>Sync</th><td class="win">Always, automatic</td><td class="lose">Manual, drifts apart</td></tr>
+          <tr class="fragment fade-in"><th>Determinism</th><td class="win">Identical on every build</td><td class="lose">Varies per prompt</td></tr>
+          <tr class="fragment fade-in"><th>Cost per new enum</th><td class="win">0 tokens, 0 seconds</td><td class="lose">Tokens + review, every time</td></tr>
+          <tr class="fragment fade-in"><th>Add a new rule</th><td class="win">Change 1 place</td><td class="lose">Chase down N places</td></tr>
+        </tbody>
+      </table>
+      <blockquote class="pull fragment fade-up">
+        <p>The generator scales with one attribute. Duplication scales with your maintenance burden.</p>
+      </blockquote>
+      <aside class="notes">
+        The real argument. Add a third JSON library tomorrow? With the generator you change
+        one template and every enum gets it. With duplication you hunt down every copy.
+      </aside>
+    </section>
+
+    <!-- ---------------- INTERACTIVE 2: cost calculator ----------------- -->
+    <section data-part="gen" data-title="What duplication actually costs" data-interactive>
+      <h2>What duplication actually costs</h2>
+      <div class="calc" data-widget="calc">
+        <div class="slider-row">
+          <span class="cnt"><span data-role="n">6</span><small>enum types</small></span>
+          <input type="range" min="1" max="40" value="6" step="1" data-role="slider" aria-label="Number of enum types">
+        </div>
+        <div class="bars">
+          <div class="bar-row">
+            <span class="who">Copy-paste by an agent<small>hand-maintained boilerplate</small></span>
+            <span class="bar-track"><span class="bar-fill" data-role="bar-dup"></span></span>
+            <span class="val"><span data-role="dup-lines">0</span> lines</span>
+          </div>
+          <div class="bar-row good">
+            <span class="who">Source generator<small>one attribute per type</small></span>
+            <span class="bar-track"><span class="bar-fill" data-role="bar-gen"></span></span>
+            <span class="val"><span data-role="gen-lines">0</span> lines</span>
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:26px">
+          <div class="card pad-sm">
+            <h4>Places to change one rule</h4>
+            <p><span class="big" data-role="places">6</span> <span style="font-size:.7em;color:var(--fg-dim)">vs.</span> <span class="big" style="color:var(--ok)">1</span></p>
+          </div>
+          <div class="card pad-sm">
+            <h4>Review surface</h4>
+            <p><span class="big" data-role="review">0</span></p>
+            <p>lines of near-identical code a human must read</p>
+          </div>
+          <div class="card pad-sm">
+            <h4>Drift probability</h4>
+            <p><span class="big" data-role="drift">0%</span></p>
+            <p>at least one copy out of sync</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">
+        Drag the slider. Numbers are from the demo solution: ~48 lines of generated
+        surface per enum (typed Value, two JSON converters, EF value converter) against
+        one attribute line. The "drift probability" is illustrative, not measured — say
+        so if anyone asks: 1 - 0.97^n, i.e. every copy is one more chance to diverge.
+        The point that lands: the generator's cost curve is flat, duplication's is linear.
+      </aside>
+    </section>
+
+    <section>  <!-- vertical stack: generator + caching detail -->
+    <section data-part="gen" data-title="The generator is this small">
+      <h2>The generator is this small</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="EnumGenerator.cs" data-steps="1-3|6-9|11-12">
+        <script type="text/template">
+[Generator]
+internal sealed class EnumGenerator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+        var enums = context.SyntaxProvider.ForAttributeWithMetadataName(
+            GeneratedEnumAttribute.Name,
+            predicate: static (node, _) => node is ClassDeclarationSyntax,
+            transform: static (ctx, _) => GetEnumToGenerate(ctx));
+
+        context.RegisterSourceOutput(enums,
+            static (ctx, e) => ctx.AddSource($"{e.ClassName}.g.cs", e.BuildCode()));
+    }
+}
+        </script>
+      </figure>
+      <blockquote class="pull fragment fade-up">
+        <p>This kind of code is <strong>fine to let an agent write</strong> — small, standardized, and the compiler tells you immediately whether it's right.</p>
+      </blockquote>
+      <aside class="notes">
+        Deliberately stopping here: I will NOT walk through building a generator line by
+        line. An agent does that trivially today. The value is in the choice to generate,
+        and — coming up — doing it correctly and performantly.
+        Arrow keys step the three highlighted regions: attribute-driven pipeline, the
+        transform, the output registration. Press DOWN for the caching detail if asked.
+      </aside>
+    </section>
+
+    <section data-part="gen" data-title="Why the model must be equatable">
+      <h2>Why the model must be equatable</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="EnumToGenerate.cs">
+        <script type="text/template">
+// Equatable by value -> the incremental pipeline can cache it and skip
+// regeneration when nothing relevant changed. A class here would compare
+// by reference and re-run the generator on every keystroke.
+internal readonly record struct EnumToGenerate(
+    string ClassName,
+    string Namespace,
+    EnumType Kind)
+{
+    public string BuildCode() => /* string building, no Roslyn symbols retained */;
+}
+        </script>
+      </figure>
+      <blockquote class="pull">
+        <p>Never hold <code>ISymbol</code> or <code>Compilation</code> in the model — it pins the whole compilation in memory.</p>
+      </blockquote>
+      <aside class="notes">
+        Optional depth slide. The two rules: equatable record struct, and no Roslyn
+        objects retained past the transform. This is exactly the kind of knowledge that
+        belongs in the skill from part 4.
+      </aside>
+    </section>
+    </section>
+
+
+    <!-- ================================================================
+         PART 2 — ANALYZERS
+         ================================================================ -->
+
+    <section data-part="analyze" data-title="Part 2 — Analyzers" class="part-divider" data-transition="zoom">
+      <div class="kicker">Part two</div>
+      <h1>Analyzers</h1>
+      <p class="sub">Let the compiler enforce your rules</p>
+      <div class="rule"></div>
+      <aside class="notes">Part 2. This is the emotional core of the talk.</aside>
+    </section>
+
+    <section data-part="analyze" data-title="Instructions vs. enforcement">
+      <h2>Instructions vs. enforcement</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out">Conventions in a <code>README</code>, <code>CLAUDE.md</code> or <code>copilot-instructions</code></li>
+        <li class="fragment fade-in-then-semi-out">&hellip; get read <strong>when it's convenient</strong></li>
+        <li class="fragment fade-in-then-semi-out">An agent can <strong>ignore, forget or &ldquo;creatively interpret&rdquo;</strong> an instruction</li>
+      </ul>
+      <blockquote class="pull hero fragment fade-up">
+        <p>AI agents can ignore instructions.<br>Build errors, they can't.</p>
+      </blockquote>
+      <aside class="notes">
+        This is the core of part 2. A prompt is a suggestion. An analyzer error is a hard
+        wall. The agent can only move on once the code compiles.
+      </aside>
+    </section>
+
+    <section data-part="analyze" data-title="Analyzer 1 — a naming convention">
+      <h2>Analyzer 1 — a naming convention</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="TypoAnalyzer.cs" data-tag="APP1001" data-steps="1-2|6-11|13-18">
+        <script type="text/template">
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public sealed class TypoAnalyzer : DiagnosticAnalyzer   // APP1001
+{
+    // "Adress" -> did you mean "Address"?
+
+    public override void Initialize(AnalysisContext context)
+    {
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+        context.EnableConcurrentExecution();
+        context.RegisterSymbolAction(AnalyzeSymbol,
+            SymbolKind.Property, SymbolKind.Field, SymbolKind.NamedType);
+    }
+
+    static void AnalyzeSymbol(SymbolAnalysisContext ctx)
+    {
+        if (ctx.Symbol.Name.IndexOf("Adress", StringComparison.OrdinalIgnoreCase) >= 0)
+            ctx.ReportDiagnostic(
+                Diagnostic.Create(Rule, ctx.Symbol.Locations[0], ctx.Symbol.Name));
+    }
+}
+        </script>
+      </figure>
+      <blockquote class="pull fragment fade-up">
+        <p>Small, but it enforces consistency for <strong>everyone</strong> — human and agent alike.</p>
+      </blockquote>
+      <aside class="notes">
+        Deliberately a simple example. Even a trivial rule is valuable if it applies
+        automatically and everywhere. Note: this is the string-based style — fine for its
+        scope, but we'll see the faster variant in part 3.
+      </aside>
+    </section>
+
+    <!-- ---------------- INTERACTIVE 3: the IDE simulator --------------- -->
+    <section data-part="analyze" data-title="From error to fix (live)" data-interactive>
+      <h2>From error to fix</h2>
+      <div class="ide" data-widget="ide">
+        <div class="tabs">
+          <span class="tab active">Customer.cs</span>
+          <span class="tab">Priority.cs</span>
+          <span class="build" data-role="build"><span data-role="build-icon">&#10007;</span> <span data-role="build-text">Build failed</span></span>
+        </div>
+        <div class="editor" data-role="editor"></div>
+        <div class="errorlist" data-role="errors">
+          <span class="sev">&#10007; error</span>
+          <span><b>APP1001</b>&nbsp; Identifier 'Adress' contains 'Adress' — did you mean 'Address'?</span>
+          <span class="dim" style="margin-left:auto;color:var(--fg-faint)">Customer.cs&nbsp;14</span>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:20px;margin-bottom:0">
+        <span class="label">click the &#128161; in the editor</span>
+        <button class="btn" data-role="reset">Reset <span class="kbd">R</span></button>
+      </div>
+      <aside class="notes">
+        The safety net for the live demo — and honestly a better visual than the real IDE
+        on a projector. Click the light bulb on line 14: the code fix renames the
+        declaration, the squiggle disappears, the error list clears and the build flips to
+        green. Say: the fix IS the correct form, so an agent doesn't have to guess it.
+        `dotnet format` applies the same fix headlessly across the solution.
+      </aside>
+    </section>
+
+    <section data-part="analyze" data-title="The code fix (APP1001)">
+      <h2>The code fix (APP1001)</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="TypoCodeFixProvider.cs" data-tag="MyApp.CodeFixes" data-steps="1-4|13-19">
+        <script type="text/template">
+[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(TypoCodeFixProvider)), Shared]
+public sealed class TypoCodeFixProvider : CodeFixProvider
+{
+    public override ImmutableArray<string> FixableDiagnosticIds => ["APP1001"];
+
+    // "Fix all in document / project / solution" comes for free
+    public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
+
+    public override async Task RegisterCodeFixesAsync(CodeFixContext context)
+    {
+        var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken);
+        var node = root!.FindToken(context.Span.Start).Parent!;
+
+        context.RegisterCodeFix(
+            CodeAction.Create(
+                title: "Rename to 'Address'",
+                createChangedSolution: c => RenameAsync(context.Document, node, c)),
+            context.Diagnostics[0]);
+    }
+}
+        </script>
+      </figure>
+      <blockquote class="pull fragment fade-up">
+        <p>Code fixes need <code>Microsoft.CodeAnalysis.Workspaces</code> — which the analyzer must not reference. Own project, or <strong>RS1038</strong>.</p>
+      </blockquote>
+      <aside class="notes">
+        Per the Microsoft docs, RegisterCodeFixesAsync lives in
+        Microsoft.CodeAnalysis.Workspaces.dll. That's why the fix belongs in its own
+        assembly: put it next to the analyzer and the Workspaces reference trips RS1038.
+        I will NOT walk the API line by line here — an agent does that trivially.
+      </aside>
+    </section>
+
+    <section data-part="analyze" data-title="Live demo">
+      <h2>&#128308; Live demo</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out">A <code>Customer</code> with an <code>Adress</code> typo &rarr; <strong>the build fails</strong> (APP1001 as an error)</li>
+        <li class="fragment fade-in-then-semi-out">Fix it live: &#128161; <strong>Rename to 'Address'</strong> &rarr; build goes green</li>
+        <li class="fragment fade-in-then-semi-out">And the generated <code>Priority.g.cs</code> — the compiler wrote the <code>Value</code></li>
+      </ul>
+      <div class="terminal fragment fade-up" style="margin-top:22px">
+<span class="dim">PS</span> <span class="p">examples&gt;</span> dotnet build CodeGenDemo.slnx
+  Customer.cs(14,19): <span class="er">error APP1001</span>: Identifier 'Adress' — did you mean 'Address'?
+  <span class="er">Build FAILED.</span>
+<span class="dim">PS</span> <span class="p">examples&gt;</span> <span class="dim"># apply the code fix, rebuild</span>
+  <span class="ok">Build succeeded.</span>
+<span class="dim">PS</span> <span class="p">examples&gt;</span> dotnet run --project src/MyApp.Demo
+  <span class="ok">High (value 2)</span>  <span class="dim">&larr; Value came from Priority.g.cs</span>
+      </div>
+      <aside class="notes">
+        Switch to the IDE, open examples/CodeGenDemo.slnx. Show: (1) the red build on
+        Customer.Adress, (2) the code fix via the light bulb, (3) Priority.g.cs under
+        obj/.../generated with the generated Value. Fall back to the previous interactive
+        slide if the demo hiccups. Optional: remove 'sealed' from Customer to make APP3001
+        fire.
+      </aside>
+    </section>
+
+    <section data-part="analyze" data-title="Analyzer 2 — an architecture rule">
+      <h2>Analyzer 2 — an architecture rule</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="DbContextAnalyzer.cs" data-tag="APP2001" data-steps="4-8|10-16">
+        <script type="text/template">
+[DiagnosticAnalyzer(LanguageNames.CSharp)]
+public sealed class DbContextAnalyzer : DiagnosticAnalyzer   // APP2001
+{
+    // "Constructor takes a DbContext -> use IDbContextFactory<T>"
+
+    public override void Initialize(AnalysisContext context)
+    {
+        context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.Method);
+    }
+
+    static void AnalyzeSymbol(SymbolAnalysisContext ctx)
+    {
+        if (ctx.Symbol is IMethodSymbol { MethodKind: MethodKind.Constructor } c &&
+            c.Parameters.Any(p => InheritsFrom(p.Type, "Microsoft.EntityFrameworkCore.DbContext")))
+            ctx.ReportDiagnostic(
+                Diagnostic.Create(Rule, c.Locations[0], c.ContainingType.Name));
+    }
+}
+        </script>
+      </figure>
+      <blockquote class="pull fragment fade-up">
+        <p>A team agreement becomes a <strong>build error</strong> — no more review discussion needed.</p>
+      </blockquote>
+      <aside class="notes">
+        This is a real architecture rule: don't inject a DbContext, inject a factory
+        (concurrency, lifetime). You used to catch this in code review. Now the compiler
+        catches it — before the PR, for the agent too.
+        Foreshadow part 3: this one is written in the SLOW style. We'll come back to it.
+      </aside>
+    </section>
+
+    <!-- ---------------- INTERACTIVE 4: layered defence ----------------- -->
+    <section data-part="analyze" data-title="From suggestion to guarantee" data-interactive>
+      <h2>From suggestion to guarantee</h2>
+      <div class="layers" data-widget="layers" style="position:relative">
+        <div class="layer" data-layer="0" data-outcome="pass">
+          <span class="num">1</span>
+          <span class="what"><code>copilot-instructions.md</code><small>broad context, loaded best-effort</small></span>
+          <span class="verdict">slipped through</span>
+        </div>
+        <div class="layer" data-layer="1" data-outcome="pass">
+          <span class="num">2</span>
+          <span class="what"><code>.claude/rules/</code><small>path-scoped MUST / NEVER, always loaded on edit</small></span>
+          <span class="verdict">slipped through</span>
+        </div>
+        <div class="layer" data-layer="2" data-outcome="warn">
+          <span class="num">3</span>
+          <span class="what">Analyzer warning<small>visible in the IDE, live, for everyone</small></span>
+          <span class="verdict">warned, ignorable</span>
+        </div>
+        <div class="layer" data-layer="3" data-outcome="block">
+          <span class="num">4</span>
+          <span class="what"><code>TreatWarningsAsErrors</code> in CI<small>the build fails — nothing merges</small></span>
+          <span class="verdict">&#10007; BLOCKED</span>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:22px;margin-bottom:0">
+        <button class="btn primary" data-role="run">&#129302; Send an agent through <span class="kbd">B</span></button>
+        <button class="btn" data-role="reset">Reset <span class="kbd">R</span></button>
+      </div>
+      <aside class="notes">
+        Press the button and let it play. The agent token walks the layers: the two
+        instruction layers it slips past, the analyzer warning it can ignore, and the CI
+        build error stops it dead. The trick isn't choosing between instructions and
+        analyzers — it's a funnel. Soft hints first, hard boundary last.
+        Line to land: "instructions persuade, the analyzer plus CI guarantee."
+      </aside>
+    </section>
+
+    <!-- ================================================================
+         PART 3 — PERFORMANCE
+         ================================================================ -->
+
+    <section data-part="perf" data-title="Part 3 — Performance" class="part-divider" data-transition="zoom">
+      <div class="kicker">Part three</div>
+      <h1>Performance</h1>
+      <p class="sub">The warning your agent doesn't feel</p>
+      <div class="rule"></div>
+      <aside class="notes">Part 3. The part nobody warns you about.</aside>
+    </section>
+
+    <section data-part="perf" data-title="Why performance is critical">
+      <h2>Why performance is critical</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out">Analyzers are injected into <strong>every</strong> project</li>
+        <li class="fragment fade-in-then-semi-out">They run on <strong>every build</strong> — and <strong>continuously in the IDE</strong></li>
+        <li class="fragment fade-in-then-semi-out">A slow analyzer runs on <strong>every keystroke</strong>, across the whole solution</li>
+      </ul>
+      <blockquote class="pull fragment fade-up">
+        <p>One sloppy analyzer taxes the IDE responsiveness and the build time of the <strong>entire team</strong>.</p>
+      </blockquote>
+      <aside class="notes">
+        This is the hidden cost. Functionally a slow analyzer works perfectly — it doesn't
+        "fail". But it eats away at everyone's developer experience, every day.
+      </aside>
+    </section>
+
+    <section>  <!-- vertical stack: slow vs fast + the real analyzer -->
+    <section data-part="perf" data-title="Slow vs. fast">
+      <h2>Slow vs. fast</h2>
+      <div class="grid-2">
+        <figure class="code-window" data-code data-lang="csharp" data-file="the slow way" data-tag="&#10007; slow">
+          <script type="text/template">
+// runs for EVERY node in the whole
+// solution, and allocates per node
+context.RegisterSymbolAction(ctx =>
+{
+    if (ctx.Symbol.ToDisplayString()
+        == "MyApp.Marker")   // string per node!
+    {
+        // ...
+    }
+}, SymbolKind.NamedType);
+          </script>
+        </figure>
+        <figure class="code-window" data-code data-lang="csharp" data-file="the fast way" data-tag="&#10003; fast">
+          <script type="text/template">
+// scope once per compilation,
+// then compare by symbol identity
+context.RegisterCompilationStartAction(start =>
+{
+    var marker = start.Compilation
+        .GetTypeByMetadataName("MyApp.Marker");
+    if (marker is null) return;   // 0 work
+
+    start.RegisterSymbolAction(ctx => {
+        if (SymbolEqualityComparer.Default
+            .Equals(ctx.Symbol, marker)) { }
+    }, SymbolKind.NamedType);
+});
+          </script>
+        </figure>
+      </div>
+      <blockquote class="pull fragment fade-up">
+        <p>Two mistakes: scope-checking <em>inside</em> the per-node action, and <code>ToDisplayString()</code> per node.</p>
+      </blockquote>
+      <aside class="notes">
+        The two biggest mistakes: (1) scope-check inside the per-node action instead of
+        once per compilation, and (2) ToDisplayString() per node, which allocates a string
+        every time. Resolve markers once, compare by symbol.
+        Next slide quantifies it — that's the one that makes people sit up.
+      </aside>
+    </section>
+
+    <section data-part="perf" data-title="The real fast analyzer (APP3001)">
+      <h2>The real one: APP3001</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="MarkerTypeAnalyzer.cs" data-tag="copy this shape">
+        <script type="text/template">
+public override void Initialize(AnalysisContext context)
+{
+    context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+    context.EnableConcurrentExecution();
+    context.RegisterCompilationStartAction(OnCompilationStart);
+}
+
+private static void OnCompilationStart(CompilationStartAnalysisContext context)
+{
+    var marker = context.Compilation.GetTypeByMetadataName("MyApp.Abstractions.EntityBase");
+    if (marker is null)
+        return;   // marker not referenced -> zero per-symbol work
+
+    // resolved symbol flows through the closure, NOT an analyzer field (RS1008)
+    context.RegisterSymbolAction(ctx => Analyze(ctx, marker), SymbolKind.NamedType);
+}
+        </script>
+      </figure>
+      <aside class="notes">
+        The shipped analyzer in examples/. Three things to point at: scope gate,
+        resolve-once, and the closure instead of a field (RS1008 forbids per-compilation
+        state in analyzer fields, because one analyzer instance serves many compilations).
+      </aside>
+    </section>
+    </section>
+
+
+    <!-- ---------------- INTERACTIVE 5: the perf race ------------------- -->
+    <section data-part="perf" data-title="One keystroke, whole solution" data-interactive>
+      <h2>One keystroke, whole solution</h2>
+      <div class="race" data-widget="race">
+        <div class="lane slow" data-lane="slow">
+          <div class="head">
+            <span class="tag">&#10007; SLOW</span>
+            <span class="name">ToDisplayString() per node<small>no scope gate — visits every project</small></span>
+            <span class="done" data-role="done"></span>
+          </div>
+          <span class="track"><span class="fill" data-role="fill"></span></span>
+          <div class="meters">
+            <span>nodes visited <b data-role="nodes">0</b></span>
+            <span>strings allocated <b class="warnv" data-role="allocs">0</b></span>
+            <span>elapsed <b data-role="ms">0 ms</b></span>
+          </div>
+        </div>
+        <div class="lane fast" data-lane="fast">
+          <div class="head">
+            <span class="tag">&#10003; FAST</span>
+            <span class="name">scope gate + symbol compare<small>irrelevant projects do zero work</small></span>
+            <span class="done" data-role="done"></span>
+          </div>
+          <span class="track"><span class="fill" data-role="fill"></span></span>
+          <div class="meters">
+            <span>nodes visited <b data-role="nodes">0</b></span>
+            <span>strings allocated <b data-role="allocs">0</b></span>
+            <span>elapsed <b data-role="ms">0 ms</b></span>
+          </div>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:24px;margin-bottom:0">
+        <span class="label">40 projects &middot; 12 000 symbols &middot; 1 keystroke</span>
+        <button class="btn primary" data-role="run">&#9654; Simulate a keystroke <span class="kbd">B</span></button>
+        <button class="btn" data-role="reset">Reset <span class="kbd">R</span></button>
+      </div>
+      <aside class="notes">
+        Illustrative simulation, not a benchmark — be honest about that if asked. The
+        shape is what's real: the slow analyzer visits every symbol in every project and
+        allocates a string each time; the fast one skips 37 of 40 projects entirely at
+        compilation-start and never allocates. Then say the line: the agent cannot feel
+        this. It only sees "compiles / doesn't compile".
+      </aside>
+    </section>
+
+    <section data-part="perf" data-title="Checklist for fast analyzers">
+      <h2>The checklist for fast analyzers</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out"><strong>Scope once</strong> in <code>RegisterCompilationStartAction</code> — irrelevant projects do 0 work</li>
+        <li class="fragment fade-in-then-semi-out"><strong>Resolve marker types once</strong> via <code>GetTypeByMetadataName</code>, compare with <code>SymbolEqualityComparer</code></li>
+        <li class="fragment fade-in-then-semi-out"><strong>Never</strong> <code>ISymbol.ToDisplayString()</code> per node — it allocates every time</li>
+        <li class="fragment fade-in-then-semi-out"><code>EnableConcurrentExecution()</code> + <code>ConfigureGeneratedCodeAnalysis(None)</code></li>
+        <li class="fragment fade-in-then-semi-out"><strong>No</strong> per-compilation state in analyzer fields (<strong>RS1008</strong>)</li>
+      </ul>
+      <aside class="notes">
+        These are the rules you bake into a skill, so your agent follows them every time.
+      </aside>
+    </section>
+
+    <section data-part="perf" data-title="Generators must be fast too">
+      <h2>Generators must be fast too</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out">Use <strong><code>IIncrementalGenerator</code></strong> — not the old <code>ISourceGenerator</code></li>
+        <li class="fragment fade-in-then-semi-out"><code>ForAttributeWithMetadataName</code> &rarr; the pipeline only runs on relevant nodes</li>
+        <li class="fragment fade-in-then-semi-out">Model as an <strong>equatable record struct</strong> &rarr; the compiler caches and doesn't regenerate needlessly</li>
+        <li class="fragment fade-in-then-semi-out">Keep the <code>transform</code> step <strong>pure and small</strong></li>
+      </ul>
+      <blockquote class="pull fragment fade-up">
+        <p>A non-incremental generator re-runs on every keystroke &rarr; IDE lag.</p>
+      </blockquote>
+      <aside class="notes">
+        Incremental is the key. The equatable data model (readonly record struct) lets the
+        pipeline cache results and only recompute what actually changed.
+      </aside>
+    </section>
+
+    <section data-part="perf" data-title="Make your agent aware of this">
+      <h2>Make your agent aware of this</h2>
+      <div class="grid-2">
+        <div class="card bad fragment fade-up">
+          <h4>What an agent sees</h4>
+          <p><strong>compiles / doesn't compile</strong></p>
+          <p style="margin-top:12px">It doesn't feel IDE lag. It never waits for its own analyzer. Without direction it writes a correct but <strong>slow</strong> one — and nothing tells it.</p>
+        </div>
+        <div class="card good fragment fade-up">
+          <h4>What you must add</h4>
+          <p><strong>performance as an explicit review item</strong></p>
+          <p style="margin-top:12px">Not an afterthought, not a code-review reflex you hope someone has. Written down, in the repo, loaded automatically.</p>
+        </div>
+      </div>
+      <blockquote class="pull fragment fade-up">
+        <p>The agent optimizes for what you hold it accountable to. Hold it accountable for performance.</p>
+      </blockquote>
+      <aside class="notes">
+        This is exactly why we need a skill: give the performance knowledge to the agent
+        structurally, instead of hoping it knows.
+      </aside>
+    </section>
+
+    <!-- ================================================================
+         PART 4 — THE AI SKILL
+         ================================================================ -->
+
+    <section data-part="skill" data-title="Part 4 — The AI Skill" class="part-divider" data-transition="zoom">
+      <div class="kicker">Part four</div>
+      <h1>The AI Skill</h1>
+      <p class="sub">Teach the agent to do it right from the start</p>
+      <div class="rule"></div>
+      <aside class="notes">Part 4. Landing the plane: how the knowledge becomes durable.</aside>
+    </section>
+
+    <section data-part="skill" data-title="What is a skill?">
+      <h2>What is a skill?</h2>
+      <ul class="rows">
+        <li class="fragment fade-in-then-semi-out">A reusable <strong>instruction package</strong> the agent loads for a matching task</li>
+        <li class="fragment fade-in-then-semi-out">Lives <strong>in the repo</strong>, in git &rarr; shared with the whole team and every agent</li>
+        <li class="fragment fade-in-then-semi-out">Captures the <strong>how</strong> and the <strong>pitfalls</strong> — once, for good</li>
+      </ul>
+      <blockquote class="pull fragment fade-up">
+        <p>Don't re-explain it in every prompt. The knowledge lives next to the code.</p>
+      </blockquote>
+      <aside class="notes">
+        A skill is markdown with a bit of frontmatter. The agent picks it automatically
+        based on the description. I'm shipping the full, generic skill alongside these slides.
+      </aside>
+    </section>
+
+    <section data-part="skill" data-title="The skill in practice">
+      <h2>The skill in practice</h2>
+      <figure class="code-window" data-code data-lang="markdown" data-file="skills/authoring-roslyn-tools/SKILL.md" data-steps="1-6|9-13|15-17">
+        <script type="text/template">
+---
+name: authoring-roslyn-tools
+description: Use when creating or changing a Roslyn analyzer,
+  code fix, or source generator. Covers the required perf checklist,
+  because analyzers run solution-wide on every build and keystroke.
+---
+
+# Analyzers & generators — do it right
+
+## Analyzer performance (always review)
+- Gate scope once in RegisterCompilationStartAction
+- Resolve marker types once (GetTypeByMetadataName), compare by symbol
+- NEVER call ISymbol.ToDisplayString() per node
+- EnableConcurrentExecution + ConfigureGeneratedCodeAnalysis(None)
+
+## Generators
+- IIncrementalGenerator + ForAttributeWithMetadataName
+- Model = equatable readonly record struct (cacheable)
+        </script>
+      </figure>
+      <p class="tiny" style="margin-top:14px">The full <code>SKILL.md</code> ships alongside these slides.</p>
+      <aside class="notes">
+        This is the bridge: everything from part 3 gets locked in here structurally. The
+        agent reads it automatically the moment it touches an analyzer or generator.
+        Point at the description field — that string is what makes the agent pick it up
+        without being told.
+      </aside>
+    </section>
+
+    <section data-part="skill" data-title="In summary">
+      <h2>In summary</h2>
+      <div class="grid-2">
+        <div class="card fragment fade-up">
+          <h4>Generate &gt; duplicate</h4>
+          <p>One source, zero drift, scales for free.</p>
+        </div>
+        <div class="card fragment fade-up">
+          <h4>Analyzers &gt; instructions</h4>
+          <p>A build error can't be ignored — by anyone.</p>
+        </div>
+        <div class="card fragment fade-up">
+          <h4>Let the agent write the code</h4>
+          <p>But guard the <strong>choices</strong> and the <strong>performance</strong>.</p>
+        </div>
+        <div class="card fragment fade-up">
+          <h4>Bake your rules into a skill</h4>
+          <p>Knowledge that travels with the code.</p>
+        </div>
+      </div>
+      <blockquote class="pull hero fragment fade-up">
+        <p>In the AI era, the compiler is your most reliable teammate.</p>
+      </blockquote>
+      <aside class="notes">
+        If you take away one thing: move truth and rules from "documentation that must be
+        read" to "behaviour the compiler enforces".
+      </aside>
+    </section>
+
+    <section data-part="skill" data-title="Thank you" class="title-slide" data-transition="fade">
+      <span class="eyebrow">Thank you</span>
+      <h1>Questions?</h1>
+      <h2>Transform Your .NET Development</h2>
+      <p class="tagline">Slides, the buildable demo solution and the <code>SKILL.md</code> are all in the repo.</p>
+      <div class="meta">
+        <span class="chip"><b>examples/</b> CodeGenDemo</span>
+        <span class="chip"><b>skills/</b> authoring-roslyn-tools</span>
+      </div>
+      <aside class="notes">
+        Thanks. The slides and the included SKILL.md are free to share.
+      </aside>
+    </section>
+
+  </div>
+</div>
+
+<!-- ================= deck chrome ================= -->
+<nav id="rail" aria-label="Chapters"></nav>
+
+<div id="context">
+  <span class="part" data-role="part">Intro</span>
+  <span class="hint"><b data-role="hint"></b></span>
+</div>
+
+<div class="overlay" id="palette-overlay">
+  <div class="palette" role="dialog" aria-label="Jump to slide">
+    <input type="text" placeholder="Jump to a slide&hellip;" data-role="q" autocomplete="off" spellcheck="false">
+    <div class="results" data-role="results"></div>
+    <div class="foot">
+      <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>
+      <span><kbd>Enter</kbd> jump</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="help-overlay">
+  <div class="helpcard" role="dialog" aria-label="Keyboard shortcuts">
+    <h3>Keyboard</h3>
+    <dl>
+      <dt><kbd>&rarr;</kbd> <kbd>Space</kbd></dt><dd>next slide / next fragment</dd>
+      <dt><kbd>&larr;</kbd></dt><dd>previous</dd>
+      <dt><kbd>&darr;</kbd> <kbd>&uarr;</kbd></dt><dd>optional depth slides</dd>
+      <dt><kbd>Ctrl</kbd>+<kbd>K</kbd> <kbd>/</kbd></dt><dd>jump to any slide</dd>
+      <dt><kbd>B</kbd></dt><dd>run the demo on an interactive slide</dd>
+      <dt><kbd>R</kbd></dt><dd>reset the interactive demo</dd>
+      <dt><kbd>D</kbd></dt><dd>draw on the slide</dd>
+      <dt><kbd>C</kbd></dt><dd>clear drawing</dd>
+      <dt><kbd>O</kbd> <kbd>Esc</kbd></dt><dd>slide overview</dd>
+      <dt><kbd>S</kbd></dt><dd>speaker notes window</dd>
+      <dt><kbd>F</kbd></dt><dd>fullscreen</dd>
+      <dt><kbd>?</kbd></dt><dd>this help</dd>
+    </dl>
+  </div>
+</div>
+
+<canvas id="annotate"></canvas>
+<div id="draw-badge">&#9998; draw mode — <kbd>C</kbd> clear, <kbd>D</kbd> exit</div>
+
+<script src="node_modules/reveal.js/dist/reveal.js"></script>
+<script src="node_modules/reveal.js/plugin/notes/notes.js"></script>
+<script src="node_modules/reveal.js/plugin/zoom/zoom.js"></script>
+<script src="js/code.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/chrome.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280,
+    height: 740,
+    margin: 0.07,
+    minScale: 0.2,
+    maxScale: 2.0,
+    center: true,
+    hash: true,
+    controls: true,
+    controlsLayout: 'edges',
+    progress: true,
+    slideNumber: 'c/t',
+    // PDF handout: one page per slide, not one per fragment
+    pdfSeparateFragments: false,
+    transition: 'slide',
+    transitionSpeed: 'default',
+    backgroundTransition: 'fade',
+    // our own overlays own these keys
+    keyboard: { 66: null, 67: null, 68: null, 82: null, 191: null },
+    plugins: [RevealNotes, RevealZoom]
+  }).then(() => {
+    DeckCode.render();
+    DeckWidgets.init();
+    DeckChrome.init();
+  });
+</script>
+</body>
+</html>
