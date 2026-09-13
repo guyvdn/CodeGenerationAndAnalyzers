@@ -1,11 +1,8 @@
-# Transform Your .NET Development
+# Source generators & analyzers in the AI era
 
-## Code Generation & Analyzers in Action!
-
-A talk about the compiler as your fastest — and strictest — teammate in the AI era.
-AI agents write code faster than ever, but *faster* is not the same as *better*.
-Two forces of the compiler make the difference: **source generators** let the compiler
-write the repetition, **analyzers** let the compiler enforce your rules.
+AI agents write code fast — and duplicate it just as fast. Let source generators
+write the repetition and analyzers enforce your rules, so a guideline becomes a
+build error nobody can ignore.
 
 An agent can ignore a README. It cannot ignore a red build.
 
@@ -15,7 +12,6 @@ An agent can ignore a README. It cannot ignore a red build.
 |------|------------|
 | `deck/` | **The interactive [reveal.js](https://revealjs.com) deck** — custom interface, five live demo panels. See [`deck/README.md`](deck/README.md) |
 | `slides.md` | The original [reveal-md](https://github.com/webpro/reveal-md) presentation (speaker notes included) |
-| `slides.pdf` | Exported PDF of the reveal-md deck |
 | `examples/` | `CodeGenDemo` — a real, buildable analyzers & source-generator solution |
 | `skills/authoring-roslyn-tools/` | An AI skill that teaches an agent to write correct, *fast* Roslyn tooling |
 

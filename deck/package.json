@@ -1,7 +1,7 @@
 {
   "name": "codegen-analyzers-deck",
   "version": "1.0.0",
-  "description": "Interactive reveal.js deck \u2014 Transform Your .NET Development",
+  "description": "Interactive reveal.js deck — Source generators & analyzers in the AI era",
   "scripts": {
     "start": "http-server . -p 8081 -c-1 -o /index.html",
     "serve": "http-server . -p 8081 -c-1"

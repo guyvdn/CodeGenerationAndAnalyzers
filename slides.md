@@ -1,5 +1,5 @@
 ---
-title: Transform Your .NET Development
+title: Source generators & analyzers in the AI era
 description: run with reveal-md.cmd slides.md
 theme: dracula
 highlightTheme: monokai
@@ -58,11 +58,11 @@ revealOptions:
   }
 </style>
 
-# Transform Your .NET Development
+# Source generators & analyzers
 
-## Code Generation & Analyzers in Action!
+## in the AI era
 
-The compiler as your fastest — and strictest — teammate in the AI era.
+The compiler as your fastest — and strictest — teammate.
 
 Note:
 Welcome. In 15-20 minutes I'll show why the compiler becomes more important in the
@@ -589,7 +589,7 @@ read" to "behaviour the compiler enforces".
 
 ## Questions?
 
-*Transform Your .NET Development: Code Generation & Analyzers in Action*
+*Source generators & analyzers in the AI era*
 
 Note:
 Thanks. The slides and the included SKILL.md are free to share.

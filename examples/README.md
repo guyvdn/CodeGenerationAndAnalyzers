@@ -1,7 +1,7 @@
 # CodeGenDemo — a working analyzers & source-generator solution
 
-A real, buildable companion to the talk *"Transform Your .NET Development:
-Code Generation & Analyzers in Action!"*. Everything is genericized (`MyApp.*`,
+A real, buildable companion to the talk *"Source generators & analyzers in the
+AI era"*. Everything is genericized (`MyApp.*`,
 diagnostic prefix `APP####`) so it can be shared publicly.
 
 > Ships in a **deliberately broken** state: one analyzer diagnostic (`APP1001`)
