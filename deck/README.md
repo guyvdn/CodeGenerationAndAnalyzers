@@ -1,18 +1,14 @@
 # The interactive deck
 
-A standalone [reveal.js](https://revealjs.com) 5 version of the talk. Same
-content and same speaker notes as `../slides.md`, but built directly against
-reveal.js so the deck can carry a custom interface and five interactive panels
-instead of static bullet slides.
+The talk, as a [reveal.js](https://revealjs.com) 5 deck built directly against
+reveal.js rather than generated from Markdown, so it can carry a custom interface
+and five interactive panels instead of static bullet slides.
 
 ```powershell
 ../start-deck.ps1              # installs deps on first run, serves on :8081
 ```
 
-`../start.ps1` still serves the original reveal-md deck on :8080. Neither
-replaces the other — pick per talk.
-
-## What's different from the reveal-md deck
+## What the custom interface adds
 
 **Interface**
 

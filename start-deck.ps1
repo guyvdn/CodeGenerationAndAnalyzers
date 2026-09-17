@@ -1,8 +1,6 @@
 # Serves the interactive reveal.js deck (deck/) on http://localhost:8081
-#
-# The other deck is the reveal-md one: ./start.ps1 serves slides.md on :8080.
 param(
-    [int]$Port = 8081,
+    [int]$Port = 8082,
     [switch]$NoBrowser
 )
 

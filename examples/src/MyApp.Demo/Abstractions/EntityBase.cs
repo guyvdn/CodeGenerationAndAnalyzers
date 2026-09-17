@@ -1,4 +1,4 @@
-namespace MyApp.Abstractions;
+namespace MyApp.Demo.Abstractions;
 
 // Marker base type that MarkerTypeAnalyzer (APP3001) keys on. Any non-sealed,
 // non-abstract class deriving from this triggers APP3001.

@@ -1,0 +1,8 @@
+# Exported copies of the deck — the source in this folder is the deck
+*.pdf
+*.pptx
+
+# Static export output (decktape, reveal-md, http-server dumps)
+_site/
+dist/
+export/

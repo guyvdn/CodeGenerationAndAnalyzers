@@ -5,4 +5,7 @@
     <Project Path="src/MyApp.CodeGen/MyApp.CodeGen.csproj" />
     <Project Path="src/MyApp.Demo/MyApp.Demo.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MyApp.Tooling.Tests/MyApp.Tooling.Tests.csproj" />
+  </Folder>
 </Solution>

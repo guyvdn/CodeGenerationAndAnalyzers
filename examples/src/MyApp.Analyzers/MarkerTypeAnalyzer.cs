@@ -6,7 +6,7 @@ namespace MyApp.Analyzers;
 
 /// <summary>
 /// APP3001 — the FAST pattern to copy for new analyzers. Entities deriving from a
-/// marker base type (MyApp.Abstractions.EntityBase) must be <c>sealed</c>.
+/// marker base type (MyApp.Demo.Abstractions.EntityBase) must be <c>sealed</c>.
 ///
 /// Performance wins:
 ///  1. Gate scope ONCE per compilation in RegisterCompilationStartAction. If the
@@ -22,7 +22,7 @@ public sealed class MarkerTypeAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "APP3001";
 
-    private const string MarkerMetadataName = "MyApp.Abstractions.EntityBase";
+    private const string MarkerMetadataName = "MyApp.Demo.Abstractions.EntityBase";
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,

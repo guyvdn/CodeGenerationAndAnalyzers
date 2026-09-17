@@ -22,14 +22,10 @@
          ================================================================ -->
 
     <section data-part="intro" data-title="Title" class="title-slide" data-transition="fade">
-      <span class="eyebrow">Roslyn</span>
       <h1>Source generators<br>&amp; analyzers</h1>
-      <h2>in the AI era — the compiler as your fastest, strictest teammate</h2>
-      <p class="tagline">AI agents write code faster than ever. <em>Faster</em> is not the same as <em>better</em>.</p>
+      <h2>in the AI era</h2>
       <div class="meta">
-        <span class="chip"><b>4</b> parts</span>
-        <span class="chip"><b>5</b> interactive demos</span>
-        <span class="chip">press <b>?</b> for keys</span>
+        <span class="chip">Guy Van den Nieuwenhof</span>
       </div>
       <aside class="notes">
         Welcome. In 15-20 minutes I'll show why the compiler becomes more important in the
@@ -144,7 +140,8 @@ public sealed partial class Priority
       <aside class="notes">
         This is the only code the developer writes: a partial class with an attribute and
         the values. Type-safe, no magic strings. Note `Value` is never declared here —
-        the generator emits it. Remove the generator and this file stops compiling.
+        the generator emits the base list that brings it in. Remove the generator and this
+        file stops compiling.
       </aside>
     </section>
 
@@ -201,8 +198,8 @@ public sealed partial class Priority
       </div>
 
       <aside class="notes">
-        THIS is the slide to spend time on. Press Build: the generator emits the typed
-        Value property, both JSON converters and the EF value converter. Then flip
+        THIS is the slide to spend time on. Press Build: the generator emits the base list
+        that types Value, the JSON converter and the EF value converter. Then flip
         Int -> String and build again: the whole generated surface changes, from ONE
         attribute argument. No other edit anywhere. That is the entire argument for
         generation over duplication — say it out loud here.
@@ -221,7 +218,7 @@ public sealed partial class Priority
           <tr class="fragment fade-in"><th>Sync</th><td class="win">Always, automatic</td><td class="lose">Manual, drifts apart</td></tr>
           <tr class="fragment fade-in"><th>Determinism</th><td class="win">Identical on every build</td><td class="lose">Varies per prompt</td></tr>
           <tr class="fragment fade-in"><th>Cost per new enum</th><td class="win">0 tokens, 0 seconds</td><td class="lose">Tokens + review, every time</td></tr>
-          <tr class="fragment fade-in"><th>Add a new rule</th><td class="win">Change 1 place</td><td class="lose">Chase down N places</td></tr>
+          <tr class="fragment fade-in"><th>Add a new line</th><td class="win">Change 1 place</td><td class="lose">Chase down N places</td></tr>
         </tbody>
       </table>
       <blockquote class="pull fragment fade-up">
@@ -271,9 +268,9 @@ public sealed partial class Priority
         </div>
       </div>
       <aside class="notes">
-        Drag the slider. Numbers are from the demo solution: ~48 lines of generated
-        surface per enum (typed Value, two JSON converters, EF value converter) against
-        one attribute line. The "drift probability" is illustrative, not measured — say
+        Drag the slider. Numbers are measured from the demo solution: 46 lines of
+        generated surface per enum (base list, JSON converter, EF value converter)
+        against one attribute line, and 103 lines for the generator itself. The "drift probability" is illustrative, not measured — say
         so if anyone asks: 1 - 0.97^n, i.e. every copy is one more chance to diverge.
         The point that lands: the generator's cost curve is flat, duplication's is linear.
       </aside>
@@ -292,10 +289,10 @@ internal sealed class EnumGenerator : IIncrementalGenerator
         var enums = context.SyntaxProvider.ForAttributeWithMetadataName(
             GeneratedEnumAttribute.Name,
             predicate: static (node, _) => node is ClassDeclarationSyntax,
-            transform: static (ctx, _) => GetEnumToGenerate(ctx));
+            transform: static (attrCtx, _) => GetEnumToGenerate(attrCtx));
 
-        context.RegisterSourceOutput(enums,
-            static (ctx, e) => ctx.AddSource($"{e.ClassName}.g.cs", e.BuildCode()));
+        context.RegisterSourceOutput(enums, static (spc, model) =>
+            spc.AddSource($"{model.ClassName}.g.cs", model.BuildCode()));
     }
 }
         </script>
@@ -312,6 +309,44 @@ internal sealed class EnumGenerator : IIncrementalGenerator
       </aside>
     </section>
 
+    <section data-part="gen" data-title="&hellip;and BuildCode is just a string">
+      <h2>&hellip;and <code>BuildCode</code> is just a string</h2>
+      <figure class="code-window" data-code data-lang="csharp" data-file="EnumBuilder.cs" data-steps="4-10|12-20">
+        <script type="text/template">
+// EnumBuilder.cs — the template, written once
+public static string BuildCode(this EnumToGenerate e)
+{
+    var (baseType, clr) = e.Type switch
+    {
+        EnumType.String => ("StringEnum", "string"),
+        EnumType.Guid   => ("GuidEnum",   "Guid"),
+        EnumType.Byte   => ("ByteEnum",   "byte"),
+        _               => ("IntEnum",    "int"),
+    };
+
+    return $$"""
+        [JsonConverter(typeof({{e.ClassName}}JsonConverter))]
+        public sealed partial class {{e.ClassName}} : {{baseType}}<{{e.ClassName}}>;
+
+        public sealed class {{e.ClassName}}JsonConverter : JsonConverter<{{e.ClassName}}>
+        {
+            // ... Read / Write over {{clr}}
+        }
+        """;
+}
+        </script>
+      </figure>
+      <blockquote class="pull fragment fade-up">
+        <p>No syntax trees, no Roslyn API — a raw string literal with holes. <code>$$</code> so single braces stay literal, <code>{{&hellip;}}</code> are the holes.</p>
+      </blockquote>
+      <aside class="notes">
+        People expect Roslyn syntax factories here. It's string building. That's the whole
+        "template" — which is why adding a rule (a third serializer, a different EF mapping)
+        is a one-file change, and why the compiler tells you immediately when you get it
+        wrong. Arrow keys step the type switch, then the template itself.
+      </aside>
+    </section>
+
     <section data-part="gen" data-title="Why the model must be equatable">
       <h2>Why the model must be equatable</h2>
       <figure class="code-window" data-code data-lang="csharp" data-file="EnumToGenerate.cs">
@@ -324,13 +359,11 @@ internal readonly record struct EnumToGenerate(
     string Namespace,
     EnumType Kind)
 {
-    public string BuildCode() => /* string building, no Roslyn symbols retained */;
+    // BuildCode() is an extension in EnumBuilder.cs — string building only,
+    // no Roslyn symbols retained past the transform.
 }
         </script>
       </figure>
-      <blockquote class="pull">
-        <p>Never hold <code>ISymbol</code> or <code>Compilation</code> in the model — it pins the whole compilation in memory.</p>
-      </blockquote>
       <aside class="notes">
         Optional depth slide. The two rules: equatable record struct, and no Roslyn
         objects retained past the transform. This is exactly the kind of knowledge that
@@ -370,33 +403,36 @@ internal readonly record struct EnumToGenerate(
 
     <section data-part="analyze" data-title="Analyzer 1 — a naming convention">
       <h2>Analyzer 1 — a naming convention</h2>
-      <figure class="code-window" data-code data-lang="csharp" data-file="TypoAnalyzer.cs" data-tag="APP1001" data-steps="1-2|6-11|13-18">
+      <figure class="code-window" data-code data-lang="csharp" data-file="TypoAnalyzer.cs" data-tag="APP1001" data-steps="1-2|6-12|14-19|21-25">
         <script type="text/template">
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class TypoAnalyzer : DiagnosticAnalyzer   // APP1001
+public sealed class TypoAnalyzer : DiagnosticAnalyzer 
 {
-    // "Adress" -> did you mean "Address"?
+    public const string DiagnosticId = "APP1001";
+
+    private static readonly DiagnosticDescriptor Rule = new(
+        id: DiagnosticId,
+        title: "Possible typo in identifier",
+        messageFormat: "Identifier '{0}' contains 'Adress' — did you mean 'Address'?",
+        category: "Naming",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeSymbol,
-            SymbolKind.Property, SymbolKind.Field, SymbolKind.NamedType);
+        context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.Property, SymbolKind.Field, SymbolKind.NamedType);
     }
 
     static void AnalyzeSymbol(SymbolAnalysisContext ctx)
     {
         if (ctx.Symbol.Name.IndexOf("Adress", StringComparison.OrdinalIgnoreCase) >= 0)
-            ctx.ReportDiagnostic(
-                Diagnostic.Create(Rule, ctx.Symbol.Locations[0], ctx.Symbol.Name));
+            ctx.ReportDiagnostic(Diagnostic.Create(Rule, ctx.Symbol.Locations[0], ctx.Symbol.Name));
     }
 }
         </script>
       </figure>
-      <blockquote class="pull fragment fade-up">
-        <p>Small, but it enforces consistency for <strong>everyone</strong> — human and agent alike.</p>
-      </blockquote>
       <aside class="notes">
         Deliberately a simple example. Even a trivial rule is valuable if it applies
         automatically and everywhere. Note: this is the string-based style — fine for its
@@ -435,12 +471,12 @@ public sealed class TypoAnalyzer : DiagnosticAnalyzer   // APP1001
 
     <section data-part="analyze" data-title="The code fix (APP1001)">
       <h2>The code fix (APP1001)</h2>
-      <figure class="code-window" data-code data-lang="csharp" data-file="TypoCodeFixProvider.cs" data-tag="MyApp.CodeFixes" data-steps="1-4|13-19">
+      <figure class="code-window" data-code data-lang="csharp" data-file="TypoCodeFixProvider.cs" data-tag="MyApp.CodeFixes" data-steps="1-4|14-18">
         <script type="text/template">
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(TypoCodeFixProvider)), Shared]
 public sealed class TypoCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => ["APP1001"];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("APP1001");
 
     // "Fix all in document / project / solution" comes for free
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
@@ -460,7 +496,7 @@ public sealed class TypoCodeFixProvider : CodeFixProvider
         </script>
       </figure>
       <blockquote class="pull fragment fade-up">
-        <p>Code fixes need <code>Microsoft.CodeAnalysis.Workspaces</code> — which the analyzer must not reference. Own project, or <strong>RS1038</strong>.</p>
+        <p>Code fixes need <code>Microsoft.CodeAnalysis.Workspaces</code> — which the analyzer must not reference.</p>
       </blockquote>
       <aside class="notes">
         Per the Microsoft docs, RegisterCodeFixesAsync lives in
@@ -470,51 +506,29 @@ public sealed class TypoCodeFixProvider : CodeFixProvider
       </aside>
     </section>
 
-    <section data-part="analyze" data-title="Live demo">
-      <h2>&#128308; Live demo</h2>
-      <ul class="rows">
-        <li class="fragment fade-in-then-semi-out">A <code>Customer</code> with an <code>Adress</code> typo &rarr; <strong>the build fails</strong> (APP1001 as an error)</li>
-        <li class="fragment fade-in-then-semi-out">Fix it live: &#128161; <strong>Rename to 'Address'</strong> &rarr; build goes green</li>
-        <li class="fragment fade-in-then-semi-out">And the generated <code>Priority.g.cs</code> — the compiler wrote the <code>Value</code></li>
-      </ul>
-      <div class="terminal fragment fade-up" style="margin-top:22px">
-<span class="dim">PS</span> <span class="p">examples&gt;</span> dotnet build CodeGenDemo.slnx
-  Customer.cs(14,19): <span class="er">error APP1001</span>: Identifier 'Adress' — did you mean 'Address'?
-  <span class="er">Build FAILED.</span>
-<span class="dim">PS</span> <span class="p">examples&gt;</span> <span class="dim"># apply the code fix, rebuild</span>
-  <span class="ok">Build succeeded.</span>
-<span class="dim">PS</span> <span class="p">examples&gt;</span> dotnet run --project src/MyApp.Demo
-  <span class="ok">High (value 2)</span>  <span class="dim">&larr; Value came from Priority.g.cs</span>
-      </div>
-      <aside class="notes">
-        Switch to the IDE, open examples/CodeGenDemo.slnx. Show: (1) the red build on
-        Customer.Adress, (2) the code fix via the light bulb, (3) Priority.g.cs under
-        obj/.../generated with the generated Value. Fall back to the previous interactive
-        slide if the demo hiccups. Optional: remove 'sealed' from Customer to make APP3001
-        fire.
-      </aside>
-    </section>
 
     <section data-part="analyze" data-title="Analyzer 2 — an architecture rule">
       <h2>Analyzer 2 — an architecture rule</h2>
-      <figure class="code-window" data-code data-lang="csharp" data-file="DbContextAnalyzer.cs" data-tag="APP2001" data-steps="4-8|10-16">
+      <figure class="code-window" data-code data-lang="csharp" data-file="DbContextAnalyzer.cs" data-tag="APP2001" data-steps="6-12|14-19">
         <script type="text/template">
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class DbContextAnalyzer : DiagnosticAnalyzer   // APP2001
+public sealed class DbContextAnalyzer : DiagnosticAnalyzer
 {
-    // "Constructor takes a DbContext -> use IDbContextFactory<T>"
+    public const string DiagnosticId = "APP2001";
 
-    public override void Initialize(AnalysisContext context)
-    {
-        context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.Method);
-    }
+    private static readonly DiagnosticDescriptor Rule = new(
+        id: DiagnosticId,
+        title: "DbContext used where a DbContextFactory is expected",
+        messageFormat: "Constructor of '{0}' takes a DbContext — use IDbContextFactory<T> instead",
+        category: "Architecture",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 
     static void AnalyzeSymbol(SymbolAnalysisContext ctx)
     {
-        if (ctx.Symbol is IMethodSymbol { MethodKind: MethodKind.Constructor } c &&
-            c.Parameters.Any(p => InheritsFrom(p.Type, "Microsoft.EntityFrameworkCore.DbContext")))
-            ctx.ReportDiagnostic(
-                Diagnostic.Create(Rule, c.Locations[0], c.ContainingType.Name));
+        if (ctx.Symbol is IMethodSymbol { MethodKind: MethodKind.Constructor } ctor &&
+            ctor.Parameters.Any(p => InheritsFrom(p.Type, "Microsoft.EntityFrameworkCore.DbContext")))
+            ctx.ReportDiagnostic(Diagnostic.Create(Rule, ctor.Locations[0], ctor.ContainingType.Name));
     }
 }
         </script>
@@ -644,7 +658,7 @@ context.RegisterCompilationStartAction(start =>
     </section>
 
     <section data-part="perf" data-title="The real fast analyzer (APP3001)">
-      <h2>The real one: APP3001</h2>
+      <h2>Example</h2>
       <figure class="code-window" data-code data-lang="csharp" data-file="MarkerTypeAnalyzer.cs" data-tag="copy this shape">
         <script type="text/template">
 public override void Initialize(AnalysisContext context)
@@ -656,7 +670,7 @@ public override void Initialize(AnalysisContext context)
 
 private static void OnCompilationStart(CompilationStartAnalysisContext context)
 {
-    var marker = context.Compilation.GetTypeByMetadataName("MyApp.Abstractions.EntityBase");
+    var marker = context.Compilation.GetTypeByMetadataName("MyApp.Demo.Abstractions.EntityBase");
     if (marker is null)
         return;   // marker not referenced -> zero per-symbol work
 
@@ -726,7 +740,6 @@ private static void OnCompilationStart(CompilationStartAnalysisContext context)
         <li class="fragment fade-in-then-semi-out"><strong>Resolve marker types once</strong> via <code>GetTypeByMetadataName</code>, compare with <code>SymbolEqualityComparer</code></li>
         <li class="fragment fade-in-then-semi-out"><strong>Never</strong> <code>ISymbol.ToDisplayString()</code> per node — it allocates every time</li>
         <li class="fragment fade-in-then-semi-out"><code>EnableConcurrentExecution()</code> + <code>ConfigureGeneratedCodeAnalysis(None)</code></li>
-        <li class="fragment fade-in-then-semi-out"><strong>No</strong> per-compilation state in analyzer fields (<strong>RS1008</strong>)</li>
       </ul>
       <aside class="notes">
         These are the rules you bake into a skill, so your agent follows them every time.
@@ -803,7 +816,7 @@ private static void OnCompilationStart(CompilationStartAnalysisContext context)
 
     <section data-part="skill" data-title="The skill in practice">
       <h2>The skill in practice</h2>
-      <figure class="code-window" data-code data-lang="markdown" data-file="skills/authoring-roslyn-tools/SKILL.md" data-steps="1-6|9-13|15-17">
+      <figure class="code-window" data-code data-lang="markdown" data-file="skills/authoring-roslyn-tools/SKILL.md" data-steps="1-6|10-14|16-18">
         <script type="text/template">
 ---
 name: authoring-roslyn-tools
@@ -845,14 +858,6 @@ description: Use when creating or changing a Roslyn analyzer,
           <h4>Analyzers &gt; instructions</h4>
           <p>A build error can't be ignored — by anyone.</p>
         </div>
-        <div class="card fragment fade-up">
-          <h4>Let the agent write the code</h4>
-          <p>But guard the <strong>choices</strong> and the <strong>performance</strong>.</p>
-        </div>
-        <div class="card fragment fade-up">
-          <h4>Bake your rules into a skill</h4>
-          <p>Knowledge that travels with the code.</p>
-        </div>
       </div>
       <blockquote class="pull hero fragment fade-up">
         <p>In the AI era, the compiler is your most reliable teammate.</p>
@@ -866,11 +871,9 @@ description: Use when creating or changing a Roslyn analyzer,
     <section data-part="skill" data-title="Thank you" class="title-slide" data-transition="fade">
       <span class="eyebrow">Thank you</span>
       <h1>Questions?</h1>
-      <h2>Source generators &amp; analyzers in the AI era</h2>
-      <p class="tagline">Slides, the buildable demo solution and the <code>SKILL.md</code> are all in the repo.</p>
+      <p class="tagline">Slides, the buildable demo solution and the skill are all in the repo.</p>
       <div class="meta">
-        <span class="chip"><b>examples/</b> CodeGenDemo</span>
-        <span class="chip"><b>skills/</b> authoring-roslyn-tools</span>
+        <span class="chip">https://github.com/guyvdn/CodeGenerationAndAnalyzers</span>
       </div>
       <aside class="notes">
         Thanks. The slides and the included SKILL.md are free to share.

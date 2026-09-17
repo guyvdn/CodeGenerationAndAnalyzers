@@ -3,12 +3,15 @@ using MyApp.CodeGen;
 namespace MyApp.Demo;
 
 // The ONLY code a developer writes: intent + values.
-// EnumGenerator emits the typed `Value` property (int, because EnumType.Int)
-// into a matching `partial class Priority`. Remove the generator and this class
-// no longer compiles — `Value` is undefined. Generation is load-bearing here.
+// EnumGenerator emits the base list — `: IntEnum<Priority>`, because EnumType.Int
+// — into a matching `partial class Priority`. That base is where `Value` (typed)
+// and `All` come from; members register themselves in the SmartEnum constructor.
+// Remove the generator and this class no longer compiles: no base, no `Value`.
+// Generation is load-bearing here.
 //
-// Flip EnumType.Int -> EnumType.String and `Value` becomes a string, with no
-// other edits: one source of truth, zero duplicated boilerplate to keep in sync.
+// Flip EnumType.Int -> EnumType.String and the base becomes StringEnum<Priority>,
+// `Value` becomes a string, and both converters change with it — no other edits.
+// One source of truth, zero duplicated boilerplate to keep in sync.
 [GeneratedEnum(EnumType.Int)]
 public sealed partial class Priority
 {

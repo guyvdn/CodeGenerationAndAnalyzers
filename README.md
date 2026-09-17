@@ -10,17 +10,14 @@ An agent can ignore a README. It cannot ignore a red build.
 
 | Path | What it is |
 |------|------------|
-| `deck/` | **The interactive [reveal.js](https://revealjs.com) deck** — custom interface, five live demo panels. See [`deck/README.md`](deck/README.md) |
-| `slides.md` | The original [reveal-md](https://github.com/webpro/reveal-md) presentation (speaker notes included) |
-| `examples/` | `CodeGenDemo` — a real, buildable analyzers & source-generator solution |
+| `deck/` | **The [reveal.js](https://revealjs.com) deck** — custom interface, five live demo panels, speaker notes. See [`deck/README.md`](deck/README.md) |
+| `examples/` | `CodeGenDemo` — a real, buildable analyzers & source-generator solution, with tests for the generator, analyzers and code fix |
 | `skills/authoring-roslyn-tools/` | An AI skill that teaches an agent to write correct, *fast* Roslyn tooling |
 
-Two decks, same talk. `deck/` is the one to present: same content and speaker
-notes, but the four parts each own an accent colour, there's a chapter rail and a
+The four parts each own an accent colour, there's a chapter rail and a
 slash-to-jump palette, and five slides are interactive rather than described —
 the generator actually emits its file, the light bulb actually applies the code
-fix, and the slow analyzer actually loses the race. `slides.md` stays as the
-plain-markdown version.
+fix, and the slow analyzer actually loses the race.
 
 ## What the talk covers
 
@@ -39,7 +36,8 @@ Instructions vs. enforcement. Three diagnostics in the demo solution:
 | `APP2001` | Architecture rule, older string-comparison style (kept for contrast) |
 | `APP3001` | Architecture rule, fast symbol-comparison style |
 
-`APP1001` is promoted to a build **error** in the demo, so it can be fixed live on stage.
+`APP1001` is promoted to a build **error** in the demo, so it can be fixed live on
+stage if there's time — the *From error to fix* slide simulates it either way.
 
 ### Part 3 — Performance
 Analyzers run on every build *and* continuously in the IDE, across the whole
@@ -52,9 +50,7 @@ ends in a checklist.
 Package that checklist as a skill so the agent applies it without being asked.
 See [`skills/authoring-roslyn-tools/SKILL.md`](skills/authoring-roslyn-tools/SKILL.md).
 
-## Running the decks
-
-The interactive one (recommended):
+## Running the deck
 
 ```powershell
 ./start-deck.ps1                   # installs deps on first run, serves on http://localhost:8081
@@ -64,17 +60,6 @@ Keys: <kbd>?</kbd> help, <kbd>/</kbd> jump to a slide, <kbd>B</kbd> run the demo
 an interactive slide, <kbd>R</kbd> reset it, <kbd>D</kbd> draw, <kbd>S</kbd> speaker
 notes. reveal.js is installed locally, so it presents with no network.
 
-The reveal-md one:
-
-```powershell
-npm install -g reveal-md
-./start.ps1                        # serves on http://localhost:8080, live-reloads on save
-```
-
-`start.ps1` runs `reveal-md` with `reveal-preprocessor.js`, which adds two things to
-plain Markdown: a title bar above a fenced code block (```` ```csharp title="Priority.cs" ````)
-and `<!-- include: slides/other.md -->` to split the deck across files.
-
 ## Running the demo
 
 Requires the .NET 10 SDK.
@@ -83,6 +68,7 @@ Requires the .NET 10 SDK.
 cd examples
 dotnet build CodeGenDemo.slnx      # FAILS on purpose: error APP1001 in Customer.cs
 dotnet run --project src/MyApp.Demo
+dotnet test tests/MyApp.Tooling.Tests
 ```
 
 See [`examples/README.md`](examples/README.md) for the full walkthrough, including

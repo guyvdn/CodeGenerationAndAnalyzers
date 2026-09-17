@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,16 +16,20 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
+  <!-- Required by the generated PrioritySqlConverter (a ValueConverter<Priority,int>).
+       Nothing here opens a DbContext — the converter is the only EF surface the
+       demo uses. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+  </ItemGroup>
+
   <!-- All three tooling projects are consumed as analyzers (not runtime refs).
        The generator injects the [GeneratedEnum] attribute into this compilation,
        so no runtime reference to it is needed. -->
   <ItemGroup>
-    <ProjectReference Include="..\MyApp.CodeGen\MyApp.CodeGen.csproj"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\MyApp.Analyzers\MyApp.Analyzers.csproj"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\MyApp.CodeFixes\MyApp.CodeFixes.csproj"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\MyApp.CodeGen\MyApp.CodeGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\MyApp.Analyzers\MyApp.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\MyApp.CodeFixes\MyApp.CodeFixes.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

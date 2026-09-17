@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tests for the three tooling projects. Deliberately does NOT reference
+       MyApp.Demo: that project fails to build on purpose (APP1001 is promoted to
+       an error there for the live demo), so depending on it would take the test
+       run down with it. The hand-written abstractions the generated code needs
+       are linked in below instead. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The Roslyn version the tests HOST with. Newer than the 4.8.0 the tooling
+         projects compile against, which mirrors reality: the SDK's compiler is
+         always at least as new as the analyzer's reference. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+    <!-- Needed so the generated {Name}SqlConverter compiles inside the test
+         compilations, and so the EF converter can be exercised for real. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MyApp.Analyzers\MyApp.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\MyApp.CodeFixes\MyApp.CodeFixes.csproj" />
+    <ProjectReference Include="..\..\src\MyApp.CodeGen\MyApp.CodeGen.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SmartEnum<T>/IntEnum<T>/... and EntityBase, compiled into the test
+         assembly. The generated code does `using MyApp.Demo.Abstractions;` and
+         MarkerTypeAnalyzer keys on EntityBase's metadata name, so the tests need
+         the real types rather than a copy that can drift. -->
+    <Compile Include="..\..\src\MyApp.Demo\Abstractions\*.cs" LinkBase="Abstractions" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-using MyApp.Abstractions;
+using MyApp.Demo.Abstractions;
 
 namespace MyApp.Demo;
 
